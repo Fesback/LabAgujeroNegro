@@ -1,5 +1,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>	
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -95,9 +98,17 @@ int main()
 	std::cout << "OpenGL: " << glGetString(GL_VERSION) << "\n";
 	std::cout << "GPU: " << glGetString(GL_RENDERER) << "\n";
 
+	//Dear gui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui_ImplGlfw_InitForOpenGL(ventana, true);
+	ImGui_ImplOpenGL3_Init("#version  450");
+
 	GLuint programa = crearPrograma("shaders/fullscreen.vert", "shaders/blackhole.frag");
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
+
+	float brillo = 1.0f; // parametro controlado por el slider
 
 	while (!glfwWindowShouldClose(ventana))
 	{
@@ -113,17 +124,35 @@ int main()
 		if (ancho == 0 || alto == 0) continue;
 		glViewport(0, 0, ancho, alto);
 
+
+		// Escena
+
 		glClearColor(0.02f, 0.02f, 0.08f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// dibujamos con nuestro shader
 		glUseProgram(programa);
 		glUniform2f(glGetUniformLocation(programa, "uResolution"), (float)ancho, (float)alto);
 		glUniform1f(glGetUniformLocation(programa, "uTime"), (float)glfwGetTime());
+		glUniform1f(glGetUniformLocation(programa, "uBrillo"), brillo);
 		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
+		//Interfaz encima de la escena
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Begin("Panel de Control");
+		ImGui::Text("FPS: %1f", ImGui::GetIO().Framerate);
+		ImGui::SliderFloat("Brillo del halo", &brillo, 0.0f, 3.0f);
+		ImGui::End();
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 		glfwSwapBuffers(ventana);
+
+
 	
 	}
 
@@ -131,6 +160,11 @@ int main()
 	glDeleteProgram(programa);
 
 	//limpiamos
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	glDeleteVertexArrays(1, &vao);
+	glDeleteProgram(programa);
 	glfwDestroyWindow(ventana);
 	glfwTerminate();
 	return 0;

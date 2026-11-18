@@ -5,6 +5,7 @@ out vec4 FragColor;
 
 uniform vec2 uResolution;
 uniform float uTime;
+uniform float uBrillo;
 
 void main() 
 {
@@ -15,8 +16,8 @@ void main()
 	float r  = length(p);
 	float borde = smoothstep(0.22, 0.20, r);
 	float brillo = exp(-abs(r - 0.22) * 30.0);
-	col += brillo * vec3(1.0, 0.6, 0.2) * (0.6 + 0.4 * sin(uTime * 2.0));
-	col += (1.0 - borde);
+	col += uBrillo * brillo * vec3(1.0, 0.6, 0.2) * (0.6 + 0.4 * sin(uTime * 2.0));
+	col *= (1.0 - borde);
 
 	FragColor = vec4(col, 1.0);	
 }
