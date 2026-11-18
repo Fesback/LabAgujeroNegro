@@ -152,6 +152,9 @@
     <None Include="shaders\blackhole.frag" />
     <None Include="shaders\fullscreen.vert" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Camera.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

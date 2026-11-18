@@ -7,6 +7,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include "Camera.h"
 
 
 static std::string leerArchivo(const std::string& ruta)
@@ -63,6 +64,12 @@ static GLuint crearPrograma(const std::string& rutaVert, const std::string& ruta
 	return prog;
 }
 
+// envia un vec3 de GLM a un uniform del sahder
+static void enviarVec3(GLuint programa, const char* nombre, const glm::vec3& v)
+{
+	glUniform3f(glGetUniformLocation(programa, nombre), v.x, v.y, v.z);
+}
+
 int main() 
 {
 
@@ -108,6 +115,7 @@ int main()
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
 
+	CamaraOrbital camara;
 	float brillo = 1.0f; // parametro controlado por el slider
 
 	while (!glfwWindowShouldClose(ventana))
@@ -124,6 +132,32 @@ int main()
 		if (ancho == 0 || alto == 0) continue;
 		glViewport(0, 0, ancho, alto);
 
+		//inicio del cuadro de interfaz
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+
+		//entrada de mouse en caso el cursor NO este sobre el panel
+		ImGuiIO& io = ImGui::GetIO();
+		if (!io.WantCaptureMouse) {
+			if (io.MouseDown[0])
+				camara.rotar(io.MouseDelta.x, io.MouseDelta.y);
+			if (io.MouseWheel != 0.0f)
+				camara.acercar(io.MouseWheel);
+		}
+
+		//Panel de control
+		ImGui::Begin("Panel de control");
+		ImGui::Text("FPS: %.1f", io.Framerate);
+		ImGui::Separator();
+		ImGui::Text("Arrastra con el mouse: girar");
+		ImGui::Text("Rieda: acercar / alejar");
+		ImGui::SliderFloat("Distancia", &camara.distancia, 1.5f, 100.0f);
+		ImGui::SliderFloat("Campo de vision", &camara.fov, 30.0f, 120.0f);
+		if (ImGui::Button("Reiniciar camara"))
+			camara.reiniciar();
+		ImGui::End();
 
 		// Escena
 
@@ -132,21 +166,15 @@ int main()
 
 		glUseProgram(programa);
 		glUniform2f(glGetUniformLocation(programa, "uResolution"), (float)ancho, (float)alto);
-		glUniform1f(glGetUniformLocation(programa, "uTime"), (float)glfwGetTime());
-		glUniform1f(glGetUniformLocation(programa, "uBrillo"), brillo);
+		enviarVec3(programa, "uCamPos", camara.posicion());
+		enviarVec3(programa, "uCamForward", camara.adelante());
+		enviarVec3(programa, "uCamRight", camara.derecha());
+		enviarVec3(programa, "uCamUp", camara.arriba());
+		glUniform1f(glGetUniformLocation(programa, "uTanFov"), camara.tanMedioFov());
 		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		//Interfaz encima de la escena
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		ImGui::Begin("Panel de Control");
-		ImGui::Text("FPS: %1f", ImGui::GetIO().Framerate);
-		ImGui::SliderFloat("Brillo del halo", &brillo, 0.0f, 3.0f);
-		ImGui::End();
-
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -156,8 +184,6 @@ int main()
 	
 	}
 
-	glDeleteVertexArrays(1, &vao);
-	glDeleteProgram(programa);
 
 	//limpiamos
 	ImGui_ImplOpenGL3_Shutdown();
