@@ -8,7 +8,14 @@
 #include <fstream>
 #include <sstream>
 #include "Camera.h"
+#include "Texture.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
+
+
+
+//------------- Utilidades de shaders ----------------
 
 static std::string leerArchivo(const std::string& ruta)
 {
@@ -116,7 +123,8 @@ int main()
 	glGenVertexArrays(1, &vao);
 
 	CamaraOrbital camara;
-	float brillo = 1.0f; // parametro controlado por el slider
+	GLuint texEstrellas = cargarTextura("assets/starmap_2020_4k.png");
+	float exposicion = 1.0f;
 
 	while (!glfwWindowShouldClose(ventana))
 	{
@@ -155,14 +163,13 @@ int main()
 		ImGui::Text("Rieda: acercar / alejar");
 		ImGui::SliderFloat("Distancia", &camara.distancia, 1.5f, 100.0f);
 		ImGui::SliderFloat("Campo de vision", &camara.fov, 30.0f, 120.0f);
+		ImGui::SliderFloat("Exoisicion de fondo", &exposicion, 0.1f, 4.0f);
 		if (ImGui::Button("Reiniciar camara"))
 			camara.reiniciar();
 		ImGui::End();
 
 		// Escena
 
-		glClearColor(0.02f, 0.02f, 0.08f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(programa);
 		glUniform2f(glGetUniformLocation(programa, "uResolution"), (float)ancho, (float)alto);
@@ -171,6 +178,12 @@ int main()
 		enviarVec3(programa, "uCamRight", camara.derecha());
 		enviarVec3(programa, "uCamUp", camara.arriba());
 		glUniform1f(glGetUniformLocation(programa, "uTanFov"), camara.tanMedioFov());
+		glUniform1f(glGetUniformLocation(programa, "uExposicion"), exposicion);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texEstrellas);
+		glUniform1i(glGetUniformLocation(programa, "uStarMap"), 0);
+
 		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -189,6 +202,7 @@ int main()
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+	glDeleteTextures(1, &texEstrellas);
 	glDeleteVertexArrays(1, &vao);
 	glDeleteProgram(programa);
 	glfwDestroyWindow(ventana);

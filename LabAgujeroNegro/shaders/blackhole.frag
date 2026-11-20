@@ -9,21 +9,10 @@ uniform vec3 uCamForward;
 uniform vec3 uCamRight;
 uniform vec3 uCamUp;
 uniform float uTanFov;
+uniform sampler2D  uStarMap;
+uniform float uExposicion;
 
 const float PI = 3.14159265359;
-
-vec3 cielo(vec3 d)
-{
-	float lon = atan(d.z, d.x);
-	float lat = asin(clamp(d.y, -1.0, 1.0));
-	float paso = PI / 12.0;
-	float c = mod(floor(lon / paso) + floor(lat / paso), 2.0);
-
-	vec3 col = mix(vec3(0.02, 0.02, 0.08), vec3(0.07, 0.07, 0.20), c);
-
-	col += vec3(0.6, 0.3, 0.1) * smoothstep(0.01, 0.0, abs(lat));
-	return col;
-}
 
 void main() 
 {
@@ -32,18 +21,30 @@ void main()
 	vec3 ro = uCamPos;
 	vec3 rd = normalize(uCamForward + (p.x * uCamRight + p.y * uCamUp) * 2.0 * uTanFov);
 
+	//coordenadas de textura a partir de la direccion del rayo
+	float lon = atan(rd.z, rd.x);
+	float lat = asin(clamp(rd.y, -1.0, 1.0));
+	vec2 uv = vec2(lon / (2.0 * PI) + 0.5, lat / PI + 0.5);
+
+
+	// derivadas calculadas fuera de cualquier  if de lo contrario quedan indefinicas
+	// en la costura (lon = +-PI) u salta de 1  a 0 y el mipmap elegiria un nivel minimo, se ve como una linea
+	vec2 uvB = vec2(fract(uv.x + 0.5) - 0.5, uv.y);
+	vec2 ddx = (fwidth(uv.x) < fwidth(uvB.x)) ? dFdx(uv) : dFdx(uvB);
+	vec2 ddy = (fwidth(uv.x) < fwidth(uvB.x)) ? dFdy(uv) : dFdy(uvB);
+
 	float b = dot(ro, rd);
 	float c = dot(ro, ro) - 1.0;
 	float h = b * b - c;
+	float t = -b - sqrt(max(h, 0.0));
 
 	vec3 col;
-	float t = -b - sqrt(max(h, 0.0));
 	if (h > 0.0 && t > 0.0) {
 		vec3 n = normalize(ro + t * rd);
 		float luz = max(dot(n, normalize(vec3(1.0, 1.0, 0.5))), 0.0);
 		col = vec3(0.05) + 0.9 * luz * vec3(0.8, 0.5, 0.3);
 	} else {
-		col = cielo(rd);
+		col = textureGrad(uStarMap, uv, ddx, ddy).rgb * uExposicion;
 	}
 
 
